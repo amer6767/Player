@@ -1,0 +1,38 @@
+name: Build APK
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Unpack project
+        run: |
+          mkdir project || true
+          if [ -f android-project.zip ]; then unzip -q android-project.zip -d project || true; else echo "no android-project.zip"; fi
+          if [ -f TinyRecursiveModels-main.zip ]; then unzip -q TinyRecursiveModels-main.zip -d project/TinyRecursiveModels || true; fi
+
+      - name: Build APK
+        working-directory: project
+        run: |
+          if [ -f ./gradlew ]; then
+            chmod +x ./gradlew
+            ./gradlew assembleDebug --no-daemon
+          else
+            echo "gradlew not found; attempting system gradle"
+            gradle assembleDebug --no-daemon
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-apk
+          path: project/app/build/outputs/**/*.apk
